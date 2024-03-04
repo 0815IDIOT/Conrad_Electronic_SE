@@ -94,8 +94,37 @@ def calc_regression(db_path):
     con.commit()
     con.close()
 
+def recommand_product(stock_id):
+
+    con = sqlite3.connect(db_path)      
+    cur = con.cursor()
+
+    sql = "SELECT count(*) FROM purchases_training WHERE stock_id = '" + str(stock_id) + "'"
+    count_max = cur.execute(sql).fetchone()[0]
+
+    sql = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC"
+    data = cur.execute(sql).fetchall()
+
+    rec_stocks = []
+
+    for row in data:
+        if row[0] == stock_id:
+            stock = row[1]
+        else:
+            stock = row[0]
+        count = row[2]
+        
+        rec_stocks.append({"stock":stock, "percentage":100. * count / count_max})
+        print(rec_stocks[-1])
+
+
+    con.close()
+    return rec_stocks
+
+
 if __name__ == "__main__":
     db_path = "resources/data.db"
 
     loading_data(db_path=db_path)
     calc_regression(db_path=db_path)
+    recommand_product(stock_id="22865")
