@@ -3,6 +3,62 @@ import csv
 import itertools
 import random
 
+class database_connector():
+    def __init__(self, db_path):
+        self.db_path = db_path
+
+    def get_connection(self):
+        con = sqlite3.connect(self.db_path)      
+        cur = con.cursor()
+
+        return con, cur
+    
+    def insert_raw_data(self, data):
+
+        # Order the raw data
+        invoice_id = data[0]
+        stock_id = data[1]
+        stock_descrip = data[2]
+        quantity = data[3]
+        invoice_date = data[4]
+        unit_price = data[5]
+        cunstomer_id = data[6]
+        country = data[7]
+
+        self.insert_customer(cunstomer_id)
+        self.insert_stock_item(stock_id, stock_descrip, unit_price)
+
+
+
+        con, cur = self.get_connection()
+
+
+
+        con.close()
+
+
+    def insert_customer(self, id, name = "", address = ""):
+        con, cur = self.get_connection()
+        
+        sql = "INSERT OR IGNORE INTO customers VALUES (" + str(id) + ", " + str(name) + ", " + str(address) + ")"
+        cur.execute(sql)
+        con.commit()
+
+        con.close()
+
+
+    def insert_stock_item(self, stock_id, stock_descrip, unit_price):
+        con, cur = self.get_connection()
+        
+        sql = "INSERT OR IGNORE INTO stock_items VALUES ('" + str(stock_id) + "', '" + str(stock_descrip) + "', " + str(unit_price) + ")"
+        cur.execute(sql)
+        con.commit()
+
+        con.close()
+
+
+
+
 def loading_data(db_path, share_training=70):
     data_path = "data/data.csv"
 
@@ -125,6 +181,6 @@ def recommand_product(stock_id):
 if __name__ == "__main__":
     db_path = "resources/data.db"
 
-    loading_data(db_path=db_path)
-    calc_regression(db_path=db_path)
+    #loading_data(db_path=db_path)
+    #calc_regression(db_path=db_path)
     recommand_product(stock_id="22865")
