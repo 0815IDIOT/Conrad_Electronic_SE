@@ -1,9 +1,9 @@
 import sqlite3
 import csv
+import itertools
 
-def loading_data():
+def loading_data(db_path):
     data_path = "data/data.csv"
-    db_path = "resources/data.db"
 
     con = sqlite3.connect(db_path)      
     cur = con.cursor()
@@ -43,6 +43,51 @@ def loading_data():
 
     print("[*] Total new lines: " + str(acc_num))
     print("[*] Lines with exceptions: " + str(exc_num))
+    print("")
+
+def calc_regression(db_path):
+    
+    print("[*] Calculating regression")
+
+    con = sqlite3.connect(db_path)      
+    cur = con.cursor()
+
+    invoice_ids = cur.execute("SELECT DISTINCT invoice_id FROM purchases;").fetchall()
+
+    i = 1
+    for invoice_id in invoice_ids:
+        print("    [-] invoice " + str(i) + "/" + str(len(invoice_ids)) + "          \r",end="")
+        stock_ids = cur.execute("SELECT stock_id FROM purchases WHERE invoice_id = '" + str(invoice_id[0]) + "'")
+        stock_id = [stock_id[0] for stock_id in stock_ids.fetchall()]
+
+        for pair in itertools.combinations(stock_id, r=2):
+            pair = sorted(pair)
+ 
+            sql = "SELECT EXISTS(SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "');"
+            exists = cur.execute(sql).fetchone()[0]
+ 
+            if exists == 0:
+                # does not exist
+                # BUG FIX: why or ignore?
+                sql = "INSERT or IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
+                cur.execute(sql)
+            else:
+                # does exist
+                sql = "SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
+                count = cur.execute(sql).fetchone()[0]
+                count += 1
+                sql = "UPDATE bought_together SET count = " + str(count) + " WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
+
+            cur.execute(sql)
+        i += 1
+
+    print("")
+    con.commit()
+    con.close()
+
 
 if __name__ == "__main__":
-    loading_data()
+    db_path = "resources/data.db"
+
+    loading_data(db_path)
+    calc_regression(db_path)
