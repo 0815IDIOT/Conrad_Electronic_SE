@@ -1,8 +1,9 @@
 import sqlite3
 import csv
 import itertools
+import random
 
-def loading_data(db_path):
+def loading_data(db_path, share_training=70):
     data_path = "data/data.csv"
 
     con = sqlite3.connect(db_path)      
@@ -21,7 +22,13 @@ def loading_data(db_path):
             if first_row:
                 first_row = False
             else:
-                sql = "INSERT INTO purchases VALUES ("
+                
+                if random.random() > share_training/100.:
+                    table = "purchases_test"
+                else:
+                    table = "purchases_training"
+
+                sql = "INSERT INTO " + table + " VALUES ("
 
                 for item in row:
                     if str(item).isnumeric():
@@ -52,12 +59,12 @@ def calc_regression(db_path):
     con = sqlite3.connect(db_path)      
     cur = con.cursor()
 
-    invoice_ids = cur.execute("SELECT DISTINCT invoice_id FROM purchases;").fetchall()
+    invoice_ids = cur.execute("SELECT DISTINCT invoice_id FROM purchases_training;").fetchall()
 
     i = 1
     for invoice_id in invoice_ids:
         print("    [-] invoice " + str(i) + "/" + str(len(invoice_ids)) + "          \r",end="")
-        stock_ids = cur.execute("SELECT stock_id FROM purchases WHERE invoice_id = '" + str(invoice_id[0]) + "'")
+        stock_ids = cur.execute("SELECT stock_id FROM purchases_training WHERE invoice_id = '" + str(invoice_id[0]) + "'")
         stock_id = [stock_id[0] for stock_id in stock_ids.fetchall()]
 
         for pair in itertools.combinations(stock_id, r=2):
@@ -65,11 +72,12 @@ def calc_regression(db_path):
  
             sql = "SELECT EXISTS(SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "');"
             exists = cur.execute(sql).fetchone()[0]
- 
+
             if exists == 0:
                 # does not exist
                 # BUG FIX: why or ignore?
-                sql = "INSERT or IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
+                sql = "INSERT OR IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
+                #sql = "INSERT INTO bought_together (stock_id_1, stock_id_2, count) VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
                 cur.execute(sql)
             else:
                 # does exist
@@ -77,17 +85,17 @@ def calc_regression(db_path):
                 count = cur.execute(sql).fetchone()[0]
                 count += 1
                 sql = "UPDATE bought_together SET count = " + str(count) + " WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
-
+            
             cur.execute(sql)
+            
         i += 1
 
     print("")
     con.commit()
     con.close()
 
-
 if __name__ == "__main__":
     db_path = "resources/data.db"
 
-    loading_data(db_path)
-    calc_regression(db_path)
+    loading_data(db_path=db_path)
+    calc_regression(db_path=db_path)
