@@ -4,8 +4,9 @@ import itertools
 import random
 
 class database_connector():
-    def __init__(self, db_path):
+    def __init__(self, db_path, dataset_type):
         self.db_path = db_path
+        self.invoice_types_id = self.set_dataset(dataset_type)
 
     def get_connection(self):
         con = sqlite3.connect(self.db_path)      
@@ -13,7 +14,27 @@ class database_connector():
 
         return con, cur
     
+    def set_dataset(self, dataset_type):
+        
+        con, cur = self.get_connection()
+
+        sql = "SELECT invoice_types_id FROM invoice_types WHERE type_name = '" + str(dataset_type) + "'"
+        id = con.execute(sql).fetchone()
+
+        if len(id) == 0:
+            raise ValueError("Unkown dataset type '" + str(dataset_type) + "'")
+        
+        id = id[0]
+        self.invoice_types_id = id
+
+        con.close()
+
+        return id
+
+    
     def load_raw_data(self, data_path, split_training=70):
+
+        print("[*] loading raw data from csv ...")
 
         with open(data_path, "r",encoding='utf-8',errors='ignore') as csv_file:
 
@@ -51,14 +72,14 @@ class database_connector():
             con.close()
 
 
-    def calc_regression(self, invoice_types_id = 2):
+    def calc_regression(self):
 
         print("[*] Calculating regression")
         print("[*] This may take a while. Loading ... ")
 
         con, cur = self.get_connection()
 
-        invoice_ids = cur.execute("SELECT invoice_id FROM invoices WHERE invoice_types_id = " + str(invoice_types_id)).fetchall()
+        invoice_ids = cur.execute("SELECT invoice_id FROM invoices WHERE invoice_types_id = " + str(self.invoice_types_id)).fetchall()
         i = 1
 
         for invoice_id in invoice_ids:
@@ -94,27 +115,44 @@ class database_connector():
         con.close()
 
 
-    def get_recommanded_product(self, stock_id, invoice_types_id = 2):
+    def get_recommanded_product(self, stock_id, limit = 20):
 
         con, cur = self.get_connection()
 
         sql = "SELECT count(*) FROM shopping_lists JOIN invoices ON shopping_lists.invoice_id = invoices.invoice_id"
-        sql += " WHERE stock_id = '" + str(stock_id) + "' AND invoice_types_id = " + str(invoice_types_id)
+        sql += " WHERE stock_id = '" + str(stock_id) + "' AND invoice_types_id = " + str(self.invoice_types_id)
         count_max = cur.execute(sql).fetchone()[0]
 
-        sql = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC"
+        sql = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC LIMIT " + str(limit)
         data = cur.execute(sql).fetchall()
+
+        sql = "SELECT DISTINCT unit_price FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "'"
+        prices_1 = cur.execute(sql).fetchall()
+        price_1_max = max(prices_1)[0]
+        price_1_min = min(prices_1)[0]
 
         rec_stocks = []
 
         for row in data:
             if row[0] == stock_id:
-                stock = row[1]
+                stock_id_2 = row[1]
             else:
-                stock = row[0]
+                stock_id_2 = row[0]
             count = row[2]
             
-            rec_stocks.append({"stock":stock, "percentage":100. * count / count_max})
+            sql = "SELECT DISTINCT unit_price FROM shopping_lists WHERE stock_id = '" + str(stock_id_2) + "'"
+            prices_2 = cur.execute(sql).fetchall()
+            price_2_max = max(prices_2)[0]
+            price_2_min = min(prices_2)[0]
+
+            sql = "SELECT stock_descrip FROM stock_items WHERE stock_id = '" + str(stock_id_2) + "'"
+            stock_2_descrip = cur.execute(sql).fetchone()[0]
+
+            rec_stocks.append({"stock": stock_id_2, 
+                               "stock_descrip" : stock_2_descrip,
+                               "percentage":100. * count / count_max,
+                               "max_bundle_price" : price_1_max + price_2_max,
+                               "min_bundle_price" : price_1_min + price_2_min})
             print(rec_stocks[-1])
 
         con.close()
@@ -149,7 +187,8 @@ if __name__ == "__main__":
     db_path = "resources/data.db"
     data_path = "data/data.csv"
 
-    dbc = database_connector(db_path)
+    dbc = database_connector(db_path, dataset_type = "training")
+
     dbc.load_raw_data(data_path)
     dbc.calc_regression()
     dbc.get_recommanded_product(stock_id="22865")
