@@ -2,6 +2,7 @@ import sqlite3
 import csv
 import itertools
 import random
+import sys
 
 class database_connector():
     def __init__(self, db_path, dataset_type):
@@ -37,6 +38,11 @@ class database_connector():
 
     
     def load_raw_data(self, data_path, split_training=70):
+
+        """
+        This function to loads the local raw csv file downloadable from Kaggle
+        (https://www.kaggle.com/datasets/carrie1/ecommerce-data) into the DB.
+        """
 
         print("[*] loading raw data from csv ...")
 
@@ -76,12 +82,40 @@ class database_connector():
             con.close()
 
 
-    def calc_regression(self):
+    def calc_regression(self, force = False):
+
+        """
+        Function to calculate the numbers of time each bundles has been bought.
+        Note, that this function can take some time. 
+        """
+
+        con, cur = self.get_connection()
+
+        # Testing wether already data in the DB table 'bought_together'.
+        # If so, ask the user if he wants to delete the old data and recalculate 
+        # the model data. Note, that the force flag ignores the user input.
+
+        sql = "SELECT count(*) FROM bought_together"
+        count = cur.execute(sql).fetchone()[0]
+
+        if count > 0:
+            if not force:
+                inp = ""
+                while inp not in ["Y", "y", "N", "n"]:
+                    inp = input("[!] Deleting old regression data (Y/N): ")
+
+                if inp in ["N", "n"]:
+                    print("[*] function aborted!")
+                    sys.exit()
+
+            print("[*] Delet old regression data")
+            sql = "DELETE FROM bought_together"
+            cur.execute(sql)
+            con.commit()
 
         print("[*] Calculating regression")
         print("[*] This may take a while. Loading ... ")
 
-        con, cur = self.get_connection()
 
         invoice_ids = cur.execute("SELECT invoice_id FROM invoices WHERE invoice_types_id = " + str(self.invoice_types_id)).fetchall()
         i = 1
@@ -100,7 +134,7 @@ class database_connector():
 
                 if exists == 0:
                     # does not exist
-                    # BUG FIX: why or ignore?
+                    # BUG FIX: why 'or ignore'?
                     sql = "INSERT OR IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
                     #sql = "INSERT INTO bought_together (stock_id_1, stock_id_2, count) VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
                     cur.execute(sql)
@@ -120,6 +154,12 @@ class database_connector():
 
 
     def get_recommanded_product(self, stock_id, limit = 20):
+
+        """
+        This function calculates the percentage at which a second product is
+        bought together with the product of 'stock_id'. The top 'limit' products
+        are returned.
+        """
 
         con, cur = self.get_connection()
 
@@ -165,6 +205,11 @@ class database_connector():
 
     def get_recommanded_price(self, stock_id):
         
+        """
+        Recommand a unit price for a product, depending on the historic mean
+        sales price. It stays to discuess, wether this is sufficent.
+        """
+
         con, cur = self.get_connection()
 
         sql = "SELECT unit_price, count(*) FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "' GROUP BY unit_price"
