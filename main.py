@@ -13,174 +13,143 @@ class database_connector():
 
         return con, cur
     
-    def insert_raw_data(self, data):
+    def load_raw_data(self, data_path, split_training=70):
 
-        # Order the raw data
-        invoice_id = data[0]
-        stock_id = data[1]
-        stock_descrip = data[2]
-        quantity = data[3]
-        invoice_date = data[4]
-        unit_price = data[5]
-        cunstomer_id = data[6]
-        country = data[7]
+        with open(data_path, "r",encoding='utf-8',errors='ignore') as csv_file:
 
-        self.insert_customer(cunstomer_id)
-        self.insert_stock_item(stock_id, stock_descrip, unit_price)
+            con, cur = self.get_connection()
 
+            first_row = True
+            csv_reader = csv.reader(csv_file, dialect=csv.excel, delimiter=",")
 
+            for data in csv_reader:
+                if first_row:
 
-        con, cur = self.get_connection()
+                    first_row = False
+                else:
+                    # Order the raw data
+                    invoice_id = data[0]
+                    stock_id = data[1]
+                    stock_descrip = data[2]
+                    quantity = data[3]
+                    invoice_date = data[4]
+                    unit_price = data[5]
+                    customer_id = data[6]
+                    country = data[7]
+                    # 1 equals test data and 2 trainings data -> see the invoice_types table
+                    invoice_types_id = 1 if random.random() > split_training / 100. else 2
 
+                    if customer_id == "":
+                        customer_id = 0
 
+                    self.insert_customer(cur, customer_id)
+                    self.insert_stock_item(cur, stock_id, stock_descrip)
+                    self.insert_invoice(cur, invoice_id, customer_id, invoice_date, country, invoice_types_id)
+                    self.insert_shopping_list(cur, invoice_id, stock_id, quantity, unit_price)
 
-        con.close()
-
-
-    def insert_customer(self, id, name = "", address = ""):
-        con, cur = self.get_connection()
-        
-        sql = "INSERT OR IGNORE INTO customers VALUES (" + str(id) + ", " + str(name) + ", " + str(address) + ")"
-        cur.execute(sql)
-        con.commit()
-
-        con.close()
-
-
-    def insert_stock_item(self, stock_id, stock_descrip, unit_price):
-        con, cur = self.get_connection()
-        
-        sql = "INSERT OR IGNORE INTO stock_items VALUES ('" + str(stock_id) + "', '" + str(stock_descrip) + "', " + str(unit_price) + ")"
-        cur.execute(sql)
-        con.commit()
-
-        con.close()
+            con.commit()
+            con.close()
 
 
+    def calc_regression(self, invoice_types_id = 2):
 
-
-def loading_data(db_path, share_training=70):
-    data_path = "data/data.csv"
-
-    con = sqlite3.connect(db_path)      
-    cur = con.cursor()
-
-    with open(data_path, "r",encoding='utf-8',errors='ignore') as csv_file:
-
+        print("[*] Calculating regression")
         print("[*] This may take a while. Loading ... ")
 
-        first_row = True
+        con, cur = self.get_connection()
+
+        invoice_ids = cur.execute("SELECT invoice_id FROM invoices WHERE invoice_types_id = " + str(invoice_types_id)).fetchall()
         i = 1
-        acc_num = 0
-        exc_num = 0
-        csv_reader = csv.reader(csv_file, dialect=csv.excel, delimiter=",")
-        for row in csv_reader:
-            if first_row:
-                first_row = False
-            else:
-                
-                if random.random() > share_training/100.:
-                    table = "purchases_test"
-                else:
-                    table = "purchases_training"
 
-                sql = "INSERT INTO " + table + " VALUES ("
+        for invoice_id in invoice_ids:
+            print("    [-] invoice " + str(i) + "/" + str(len(invoice_ids)) + "          \r",end="")
+            
+            stock_ids = cur.execute("SELECT stock_id FROM shopping_lists WHERE invoice_id = '" + str(invoice_id[0]) + "'")
+            stock_ids = [stock_id[0] for stock_id in stock_ids.fetchall()]
 
-                for item in row:
-                    if str(item).isnumeric():
-                        sql += item + ","
-                    else:
-                        sql += "\"" + str(item) + "\", "
+            for pair in itertools.combinations(stock_ids, r=2):
+                pair = sorted(pair)
 
-                sql = sql[:-2] + ");"
-                
-                try:
+                sql = "SELECT EXISTS(SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "');"
+                exists = cur.execute(sql).fetchone()[0]
+
+                if exists == 0:
+                    # does not exist
+                    # BUG FIX: why or ignore?
+                    sql = "INSERT OR IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
+                    #sql = "INSERT INTO bought_together (stock_id_1, stock_id_2, count) VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
                     cur.execute(sql)
-                    acc_num += 1
-                except Exception as e:
-                    exc_num += 1
-            i += 1
-    
-    con.commit()
-    con.close()
-
-    print("[*] Total new lines: " + str(acc_num))
-    print("[*] Lines with exceptions: " + str(exc_num))
-    print("")
-
-def calc_regression(db_path):
-    
-    print("[*] Calculating regression")
-
-    con = sqlite3.connect(db_path)      
-    cur = con.cursor()
-
-    invoice_ids = cur.execute("SELECT DISTINCT invoice_id FROM purchases_training;").fetchall()
-
-    i = 1
-    for invoice_id in invoice_ids:
-        print("    [-] invoice " + str(i) + "/" + str(len(invoice_ids)) + "          \r",end="")
-        stock_ids = cur.execute("SELECT stock_id FROM purchases_training WHERE invoice_id = '" + str(invoice_id[0]) + "'")
-        stock_id = [stock_id[0] for stock_id in stock_ids.fetchall()]
-
-        for pair in itertools.combinations(stock_id, r=2):
-            pair = sorted(pair)
- 
-            sql = "SELECT EXISTS(SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "');"
-            exists = cur.execute(sql).fetchone()[0]
-
-            if exists == 0:
-                # does not exist
-                # BUG FIX: why or ignore?
-                sql = "INSERT OR IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
-                #sql = "INSERT INTO bought_together (stock_id_1, stock_id_2, count) VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
-                cur.execute(sql)
-            else:
-                # does exist
-                sql = "SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
-                count = cur.execute(sql).fetchone()[0]
-                count += 1
-                sql = "UPDATE bought_together SET count = " + str(count) + " WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
+                else:
+                    # does exist
+                    sql = "SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
+                    count = cur.execute(sql).fetchone()[0]
+                    count += 1
+                    sql = "UPDATE bought_together SET count = " + str(count) + " WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
             
             cur.execute(sql)
+            i += 1
+
+        print("")
+        con.commit()
+        con.close()
+
+
+    def get_recommanded_product(self, stock_id, invoice_types_id = 2):
+
+        con, cur = self.get_connection()
+
+        sql = "SELECT count(*) FROM shopping_lists JOIN invoices ON shopping_lists.invoice_id = invoices.invoice_id"
+        sql += " WHERE stock_id = '" + str(stock_id) + "' AND invoice_types_id = " + str(invoice_types_id)
+        count_max = cur.execute(sql).fetchone()[0]
+
+        sql = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC"
+        data = cur.execute(sql).fetchall()
+
+        rec_stocks = []
+
+        for row in data:
+            if row[0] == stock_id:
+                stock = row[1]
+            else:
+                stock = row[0]
+            count = row[2]
             
-        i += 1
+            rec_stocks.append({"stock":stock, "percentage":100. * count / count_max})
+            print(rec_stocks[-1])
 
-    print("")
-    con.commit()
-    con.close()
+        con.close()
+        return rec_stocks
 
-def recommand_product(stock_id):
 
-    con = sqlite3.connect(db_path)      
-    cur = con.cursor()
-
-    sql = "SELECT count(*) FROM purchases_training WHERE stock_id = '" + str(stock_id) + "'"
-    count_max = cur.execute(sql).fetchone()[0]
-
-    sql = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC"
-    data = cur.execute(sql).fetchall()
-
-    rec_stocks = []
-
-    for row in data:
-        if row[0] == stock_id:
-            stock = row[1]
-        else:
-            stock = row[0]
-        count = row[2]
+    def insert_customer(self, cur, customer_id, name = "", address = ""):
         
-        rec_stocks.append({"stock":stock, "percentage":100. * count / count_max})
-        print(rec_stocks[-1])
+        sql = "INSERT OR IGNORE INTO customers VALUES (" + str(customer_id) + ", '" + str(name) + "', '" + str(address) + "')"
+        cur.execute(sql)
 
 
-    con.close()
-    return rec_stocks
+    def insert_stock_item(self, cur, stock_id, stock_descrip):
+
+        sql = "INSERT OR IGNORE INTO stock_items VALUES ('" + str(stock_id) + "', '" + str(stock_descrip.replace("\"","").replace("'","")) + "')"
+        cur.execute(sql)
+
+
+    def insert_invoice(self, cur, invoice_id, customer_id, invoice_date, country, invoice_types_id):
+
+        sql = "INSERT OR IGNORE INTO invoices VALUES ('" + str(invoice_id) + "', " + str(customer_id) +  ", '" + str(invoice_date) + "', '" + str(country) + "', " + str(invoice_types_id) + ")"
+        cur.execute(sql)
+
+
+    def insert_shopping_list(self, cur, invoice_id, stock_id, quantity, unit_price):        
+
+        sql = "INSERT OR IGNORE INTO shopping_lists VALUES ('" + str(invoice_id) + "', '" + str(stock_id) + "', " + str(quantity) + ", " + str(unit_price) + ")"
+        cur.execute(sql)
 
 
 if __name__ == "__main__":
     db_path = "resources/data.db"
+    data_path = "data/data.csv"
 
-    #loading_data(db_path=db_path)
-    #calc_regression(db_path=db_path)
-    recommand_product(stock_id="22865")
+    dbc = database_connector(db_path)
+    dbc.load_raw_data(data_path)
+    dbc.calc_regression()
+    dbc.get_recommanded_product(stock_id="22865")
