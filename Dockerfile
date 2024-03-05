@@ -6,8 +6,8 @@ COPY ./requirements.txt /code/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-COPY ./app /code/app
+COPY ./src /code
 
-CMD ["install.sh"]
+RUN /code/install.sh
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "my_REST_api:app", "--host", "0.0.0.0", "--port", "80"]

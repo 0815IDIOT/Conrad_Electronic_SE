@@ -1,5 +1,5 @@
-from databace_connector import Database_connector 
 from fastapi import FastAPI
+from databace_connector import Database_connector 
 
 db_path = "resources/data.db"
 

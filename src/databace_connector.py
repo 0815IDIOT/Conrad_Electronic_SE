@@ -40,7 +40,7 @@ class Database_connector():
     def load_raw_data(self, data_path, split_training=70):
 
         """
-        This function to loads the local raw csv file downloadable from Kaggle
+        This function loads the local raw csv file downloadable from Kaggle
         (https://www.kaggle.com/datasets/carrie1/ecommerce-data) into the DB.
         """
 
@@ -85,8 +85,8 @@ class Database_connector():
     def calc_regression(self, force = False):
 
         """
-        Function to calculate the numbers of time each bundles has been bought.
-        Note, that this function can take some time. 
+        This function to calculate the number of times each bundle has been
+        bought. Note that this function can take some time. 
         """
 
         con, cur = self.get_connection()

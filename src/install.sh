@@ -1,12 +1,11 @@
 #!/bin/bash
 
-#sudo apt-get update
-#sudo apt-get upgrade
-#sudo apt-get install python3 sqlite3 python3-pip
-#python3 -m ven venv
-#source venv/bin/activate
-#pip3 install -r requirements.txt
-#python3 -B initialize.py
+apt-get update
+apt-get upgrade
+apt-get install python3 sqlite3 python3-pip -y
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
 
 if [ -f resources/data.db ]; then
     echo "[*] deleting old DB" 
@@ -17,3 +16,5 @@ echo "[*] create new DB"
 sqlite3 resources/data.db < resources/sqlite3.sql
 
 echo "[*] sucessfully installed!"
+
+python3 -B initialize.py
