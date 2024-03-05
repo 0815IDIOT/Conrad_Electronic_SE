@@ -15,7 +15,11 @@ class database_connector():
         return con, cur
     
     def set_dataset(self, dataset_type):
-        
+        """
+        Here, the user can set on which type of dataset the correlation should
+        be calculated. The standard values are 'test' and 'training'.
+        """
+
         con, cur = self.get_connection()
 
         sql = "SELECT invoice_types_id FROM invoice_types WHERE type_name = '" + str(dataset_type) + "'"
@@ -157,6 +161,26 @@ class database_connector():
 
         con.close()
         return rec_stocks
+    
+
+    def get_recommanded_price(self, stock_id):
+        
+        con, cur = self.get_connection()
+
+        sql = "SELECT unit_price, count(*) FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "' GROUP BY unit_price"
+        price_data = cur.execute(sql).fetchall()
+        count = 0.
+        price = 0.
+        for price_item in price_data:
+            count += price_item[1]
+            price += price_item[0] * price_item[1]
+        
+        price = round(price / count, 2)
+        print(price)
+
+        con.close()
+
+        return price
 
 
     def insert_customer(self, cur, customer_id, name = "", address = ""):
@@ -192,3 +216,4 @@ if __name__ == "__main__":
     dbc.load_raw_data(data_path)
     dbc.calc_regression()
     dbc.get_recommanded_product(stock_id="22865")
+    dbc.get_recommanded_price(stock_id="22865")
