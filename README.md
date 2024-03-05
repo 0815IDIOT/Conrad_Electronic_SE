@@ -60,14 +60,30 @@ each bundle has been bought. Note that this function can take some time.
 `get_recommanded_product(stock_id, limit = 20)`: This function calculates the
 percentage at which a second product is bought together with the product of
 `stock_id`. The top 'limit' products are returned.
-- `stock_id` is the stock id of the items you want to get recommendations for.
+- `stock_id` is the stock ID of the items you want to get recommendations for.
 - `limit` defines the number of recommendations you will maximally get. 
 
 `get_recommanded_price(stock_id)`: Recommends a unit price for a product,
 depending on the historic mean sales price. It remains to be discussed whether
 this is sufficient; see the Q&A below.
-- `stock_id` is the stock id of the items for wich you want to get a recommended
+- `stock_id` is the stock ID of the items for which you want to get a recommended
   price.
+
+Here is an example file with all the functions described above:
+
+```python
+from databace_connector import Database_connector 
+
+db_path = "resources/data.db"
+data_path = "data/data.csv"
+
+dbc = Database_connector(db_path, dataset_type = "training")
+
+dbc.load_raw_data(data_path)
+dbc.calc_regression()
+dbc.get_recommanded_product(stock_id="22865")
+dbc.get_recommanded_price(stock_id="22865")
+```
 
 ## Docker
 

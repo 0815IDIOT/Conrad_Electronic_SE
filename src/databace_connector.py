@@ -5,7 +5,7 @@ import random
 import sys
 
 class Database_connector():
-    def __init__(self, db_path, dataset_type):
+    def __init__(self, db_path, dataset_type: str):
         self.db_path = db_path
         self.invoice_types_id = self.set_dataset(dataset_type)
 
@@ -15,11 +15,13 @@ class Database_connector():
 
         return con, cur
     
-    def set_dataset(self, dataset_type):
+    def set_dataset(self, dataset_type: str):
         """
         Here, the user can set on which type of dataset the correlation should
         be calculated. The standard values are 'test' and 'training'.
         """
+
+        if not isinstance(dataset_type, str): raise Exception("in function 'set_dataset': 'dataset_type' is not from type 'str' but from type '" + str(type(dataset_type)) + "'")
 
         con, cur = self.get_connection()
 
@@ -37,7 +39,10 @@ class Database_connector():
         return id
 
     
-    def load_raw_data(self, data_path, split_training=70):
+    def load_raw_data(self, data_path:str, split_training:float = 70.):
+
+        if not isinstance(data_path, str): raise Exception("in function 'load_raw_data': 'data_path' is not from type 'str' but from type '" + str(type(data_path)) + "'")
+        if not isinstance(split_training, float): raise Exception("in function 'load_raw_data': 'split_training' is not from type 'float' but from type '" + str(type(split_training)) + "'")
 
         """
         This function loads the local raw csv file downloadable from Kaggle
@@ -82,12 +87,14 @@ class Database_connector():
             con.close()
 
 
-    def calc_regression(self, force = False):
+    def calc_regression(self, force:bool = False):
 
         """
         This function to calculate the number of times each bundle has been
         bought. Note that this function can take some time. 
         """
+
+        if not isinstance(force, bool): raise Exception("in function 'calc_regression': 'force' is not from type 'bool' but from type '" + str(type(force)) + "'")
 
         con, cur = self.get_connection()
 
@@ -153,13 +160,16 @@ class Database_connector():
         con.close()
 
 
-    def get_recommanded_product(self, stock_id, limit = 20):
+    def get_recommanded_product(self, stock_id:str, limit:int = 20):
 
         """
         This function calculates the percentage at which a second product is
         bought together with the product of 'stock_id'. The top 'limit' products
         are returned.
         """
+
+        if not isinstance(stock_id, str): raise Exception("in function 'get_recommanded_product': 'stock_id' is not from type 'str' but from type '" + str(type(stock_id)) + "'")
+        if not isinstance(limit, int): raise Exception("in function 'get_recommanded_product': 'limit' is not from type 'int' but from type '" + str(type(limit)) + "'")
 
         con, cur = self.get_connection()
 
@@ -203,12 +213,14 @@ class Database_connector():
         return rec_stocks
     
 
-    def get_recommanded_price(self, stock_id):
+    def get_recommanded_price(self, stock_id:str):
         
         """
         Recommand a unit price for a product, depending on the historic mean
         sales price. It stays to discuess, wether this is sufficent.
         """
+
+        if not isinstance(stock_id, str): raise Exception("in function 'get_recommanded_price': 'stock_id' is not from type 'str' but from type '" + str(type(stock_id)) + "'")
 
         con, cur = self.get_connection()
 
@@ -228,37 +240,43 @@ class Database_connector():
         return price
 
 
-    def insert_customer(self, cur, customer_id, name = "", address = ""):
+    def insert_customer(self, cur, customer_id:int, name:str = "", address:str = ""):
         
+        if not isinstance(customer_id, int): raise Exception("in function 'insert_customer': 'customer_id' is not from type 'int' but from type '" + str(type(customer_id)) + "'")
+        if not isinstance(name, str): raise Exception("in function 'insert_customer': 'name' is not from type 'str' but from type '" + str(type(name)) + "'")
+        if not isinstance(address, str): raise Exception("in function 'insert_customer': 'address' is not from type 'str' but from type '" + str(type(address)) + "'")
+
         sql = "INSERT OR IGNORE INTO customers VALUES (" + str(customer_id) + ", '" + str(name) + "', '" + str(address) + "')"
         cur.execute(sql)
 
 
-    def insert_stock_item(self, cur, stock_id, stock_descrip):
+    def insert_stock_item(self, cur, stock_id:str, stock_descrip:str):
+
+        if not isinstance(stock_id, str): raise Exception("in function 'insert_stock_item': 'stock_id' is not from type 'str' but from type '" + str(type(stock_id)) + "'")
+        if not isinstance(stock_descrip, str): raise Exception("in function 'insert_stock_item': 'stock_descrip' is not from type 'str' but from type '" + str(type(stock_descrip)) + "'")
 
         sql = "INSERT OR IGNORE INTO stock_items VALUES ('" + str(stock_id) + "', '" + str(stock_descrip.replace("\"","").replace("'","")) + "')"
         cur.execute(sql)
 
 
-    def insert_invoice(self, cur, invoice_id, customer_id, invoice_date, country, invoice_types_id):
+    def insert_invoice(self, cur, invoice_id:int, customer_id:int, invoice_date:str, country:str, invoice_types_id:int):
+
+        if not isinstance(invoice_id, int): raise Exception("in function 'insert_invoice': 'invoice_id' is not from type 'int' but from type '" + str(type(invoice_id)) + "'")
+        if not isinstance(customer_id, int): raise Exception("in function 'insert_invoice': 'customer_id' is not from type 'int' but from type '" + str(type(customer_id)) + "'")
+        if not isinstance(invoice_date, str): raise Exception("in function 'insert_invoice': 'invoice_date' is not from type 'str' but from type '" + str(type(invoice_date)) + "'")
+        if not isinstance(country, str): raise Exception("in function 'insert_invoice': 'country' is not from type 'str' but from type '" + str(type(invoice_countryypes_id)) + "'")
+        if not isinstance(invoice_types_id, int): raise Exception("in function 'insert_invoice': 'invoice_types_id' is not from type 'int' but from type '" + str(type(invoice_types_id)) + "'")
 
         sql = "INSERT OR IGNORE INTO invoices VALUES ('" + str(invoice_id) + "', " + str(customer_id) +  ", '" + str(invoice_date) + "', '" + str(country) + "', " + str(invoice_types_id) + ")"
         cur.execute(sql)
 
 
-    def insert_shopping_list(self, cur, invoice_id, stock_id, quantity, unit_price):        
+    def insert_shopping_list(self, cur, invoice_id:int, stock_id:str, quantity:int, unit_price:float):        
+
+        if not isinstance(invoice_id, int): raise Exception("in function 'insert_shopping_list': 'invoice_id' is not from type 'int' but from type '" + str(type(invoice_id)) + "'")
+        if not isinstance(stock_id, str): raise Exception("in function 'insert_shopping_list': 'stock_id' is not from type 'str' but from type '" + str(type(stock_id)) + "'")
+        if not isinstance(quantity, int): raise Exception("in function 'insert_shopping_list': 'quantity' is not from type 'int' but from type '" + str(type(quantity)) + "'")
+        if not isinstance(unit_price, float): raise Exception("in function 'insert_shopping_list': 'unit_price' is not from type 'float' but from type '" + str(type(unit_price)) + "'")
 
         sql = "INSERT OR IGNORE INTO shopping_lists VALUES ('" + str(invoice_id) + "', '" + str(stock_id) + "', " + str(quantity) + ", " + str(unit_price) + ")"
         cur.execute(sql)
-
-
-if __name__ == "__main__":
-    db_path = "resources/data.db"
-    data_path = "data/data.csv"
-
-    dbc = Database_connector(db_path, dataset_type = "training")
-
-    #dbc.load_raw_data(data_path)
-    #dbc.calc_regression()
-    dbc.get_recommanded_product(stock_id="22865")
-    dbc.get_recommanded_price(stock_id="22865")
