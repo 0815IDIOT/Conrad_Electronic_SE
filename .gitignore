@@ -1,4 +1,4 @@
 venv/
 data/*
-!data/data.csv
-resources/*.db
+!app/data/data.csv
+*.db
