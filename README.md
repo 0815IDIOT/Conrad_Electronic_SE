@@ -114,15 +114,18 @@ relations and expand my data set in the future. Therefore, I created a table for
 the following entities: customer, invoice, stock item, and a n:m relation for
 stock items to invoices.
 
-My approach for the regression model is to calculate the percentage at which two
-items are bought together. Therefore, I created a new table `bought_together`,
-in which I count the amount of two **distinct** stock items that appear within
-one invoice.
+For performance reasons of the REST API, I decided to save some results later
+needed for the regression in a new DB table (`bought_together`). This table
+holds the amount of two **distinct** stock items that appear within one invoice.
+Based on this, my approach for the regression model is to calculate the
+probability at which two items are bought together: P(item_a|item_b) = P(item_a
+and item_b) / P(item_b).
 
-Further, when someone wants the recommended stock items of the model for one
-stock item `A`, the model divides the number of each stock item `B` bought with
-item `A` through the number of times the item `A` was bought. The resulting list
-is ordered by the percentage.
+Further, when someone wants
+the recommended stock items of the model for one stock item `A`, the model
+divides the number of each stock item `B` bought with item `A` through the
+number of times the item `A` was bought. The resulting list is ordered by the
+percentage.
 
 I used a `0` as the placeholder if a customer ID is missing. Further, I escaped
 all " and ' characters within the item descriptions.
