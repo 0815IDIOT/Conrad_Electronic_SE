@@ -67,16 +67,13 @@ class Database_connector():
                     invoice_id = data[0]
                     stock_id = data[1]
                     stock_descrip = data[2]
-                    quantity = data[3]
+                    quantity = int(data[3])
                     invoice_date = data[4]
-                    unit_price = data[5]
-                    customer_id = data[6]
+                    unit_price = float(data[5])
+                    customer_id = 0 if data[6] == "" else int(data[6])
                     country = data[7]
                     # 1 equals test data and 2 trainings data -> see the invoice_types table
                     invoice_types_id = 1 if random.random() > split_training / 100. else 2
-
-                    if customer_id == "":
-                        customer_id = 0
 
                     self.insert_customer(cur, customer_id)
                     self.insert_stock_item(cur, stock_id, stock_descrip)
@@ -87,8 +84,7 @@ class Database_connector():
             con.close()
 
 
-    def calc_regression(self, force:bool = False):
-
+    def calc_regression_v2(self, force:bool = False):
         """
         This function to calculate the number of times each bundle has been
         bought. Note that this function can take some time. 
@@ -122,43 +118,14 @@ class Database_connector():
 
         print("[*] Calculating regression")
         print("[*] This may take a while. Loading ... ")
+    
+        sql = "INSERT INTO bought_together "
+        sql += "SELECT r.stock_id AS r_stock, l.stock_id AS l_stock, COUNT(*) FROM shopping_lists AS l JOIN shopping_lists AS r ON "
+        sql += "r.invoice_id = l.invoice_id AND l.stock_id != r.stock_id AND (SELECT invoice_types_id FROM invoices WHERE invoice_id = l.invoice_id) = 2 GROUP BY r.stock_id, l.stock_id"
 
-
-        invoice_ids = cur.execute("SELECT invoice_id FROM invoices WHERE invoice_types_id = " + str(self.invoice_types_id)).fetchall()
-        i = 1
-
-        for invoice_id in invoice_ids:
-            print("    [-] invoice " + str(i) + "/" + str(len(invoice_ids)) + "          \r",end="")
-            
-            stock_ids = cur.execute("SELECT stock_id FROM shopping_lists WHERE invoice_id = '" + str(invoice_id[0]) + "'")
-            stock_ids = [stock_id[0] for stock_id in stock_ids.fetchall()]
-
-            for pair in itertools.combinations(stock_ids, r=2):
-                pair = sorted(pair)
-
-                sql = "SELECT EXISTS(SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "');"
-                exists = cur.execute(sql).fetchone()[0]
-
-                if exists == 0:
-                    # does not exist
-                    # BUG FIX: why 'or ignore'?
-                    sql = "INSERT OR IGNORE INTO bought_together VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
-                    #sql = "INSERT INTO bought_together (stock_id_1, stock_id_2, count) VALUES ('" + str(pair[0]) + "', '" + str(pair[1]) + "', 1)"
-                    cur.execute(sql)
-                else:
-                    # does exist
-                    sql = "SELECT count FROM bought_together WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
-                    count = cur.execute(sql).fetchone()[0]
-                    count += 1
-                    sql = "UPDATE bought_together SET count = " + str(count) + " WHERE stock_id_1='" + str(pair[0]) + "' and stock_id_2='" + str(pair[1]) + "'"
-            
-            cur.execute(sql)
-            i += 1
-
-        print("")
+        cur.execute(sql)
         con.commit()
         con.close()
-
 
     def get_recommanded_product(self, stock_id:str, limit:int = 20):
 
@@ -259,21 +226,21 @@ class Database_connector():
         cur.execute(sql)
 
 
-    def insert_invoice(self, cur, invoice_id:int, customer_id:int, invoice_date:str, country:str, invoice_types_id:int):
+    def insert_invoice(self, cur, invoice_id:str, customer_id:int, invoice_date:str, country:str, invoice_types_id:int):
 
-        if not isinstance(invoice_id, int): raise Exception("in function 'insert_invoice': 'invoice_id' is not from type 'int' but from type '" + str(type(invoice_id)) + "'")
+        if not isinstance(invoice_id, str): raise Exception("in function 'insert_invoice': 'invoice_id' is not from type 'str' but from type '" + str(type(invoice_id)) + "'")
         if not isinstance(customer_id, int): raise Exception("in function 'insert_invoice': 'customer_id' is not from type 'int' but from type '" + str(type(customer_id)) + "'")
         if not isinstance(invoice_date, str): raise Exception("in function 'insert_invoice': 'invoice_date' is not from type 'str' but from type '" + str(type(invoice_date)) + "'")
-        if not isinstance(country, str): raise Exception("in function 'insert_invoice': 'country' is not from type 'str' but from type '" + str(type(invoice_countryypes_id)) + "'")
+        if not isinstance(country, str): raise Exception("in function 'insert_invoice': 'country' is not from type 'str' but from type '" + str(type(invoice_types_id)) + "'")
         if not isinstance(invoice_types_id, int): raise Exception("in function 'insert_invoice': 'invoice_types_id' is not from type 'int' but from type '" + str(type(invoice_types_id)) + "'")
 
         sql = "INSERT OR IGNORE INTO invoices VALUES ('" + str(invoice_id) + "', " + str(customer_id) +  ", '" + str(invoice_date) + "', '" + str(country) + "', " + str(invoice_types_id) + ")"
         cur.execute(sql)
 
 
-    def insert_shopping_list(self, cur, invoice_id:int, stock_id:str, quantity:int, unit_price:float):        
+    def insert_shopping_list(self, cur, invoice_id:str, stock_id:str, quantity:int, unit_price:float):        
 
-        if not isinstance(invoice_id, int): raise Exception("in function 'insert_shopping_list': 'invoice_id' is not from type 'int' but from type '" + str(type(invoice_id)) + "'")
+        if not isinstance(invoice_id, str): raise Exception("in function 'insert_shopping_list': 'invoice_id' is not from type 'str' but from type '" + str(type(invoice_id)) + "'")
         if not isinstance(stock_id, str): raise Exception("in function 'insert_shopping_list': 'stock_id' is not from type 'str' but from type '" + str(type(stock_id)) + "'")
         if not isinstance(quantity, int): raise Exception("in function 'insert_shopping_list': 'quantity' is not from type 'int' but from type '" + str(type(quantity)) + "'")
         if not isinstance(unit_price, float): raise Exception("in function 'insert_shopping_list': 'unit_price' is not from type 'float' but from type '" + str(type(unit_price)) + "'")
