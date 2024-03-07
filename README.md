@@ -117,10 +117,7 @@ stock items to invoices.
 My approach for the regression model is to calculate the percentage at which two
 items are bought together. Therefore, I created a new table `bought_together`,
 in which I count the amount of two **distinct** stock items that appear within
-one invoice. Note that in order to save memory and avoid duplicated
-information, I only save the `(stock_item_a, stock_item_b)` pair and not the
-`(stock_item_b, stock_item_a)` pair, according to the inbuild `sort()` function
-of python strings.
+one invoice.
 
 Further, when someone wants the recommended stock items of the model for one
 stock item `A`, the model divides the number of each stock item `B` bought with
@@ -160,18 +157,35 @@ be bought more if their price is decreased drastically, independent of whether
 customers typically buy these two items together.
 
 ## Is the provided data sufficient to predict the price? What other data would you like to gather to improve your solution?
+For me, it is unclear what the customer wants the price related to for the
+regression model. One could make a regression based on the amount any arbitrary
+item was bought for a certain price. I would expect that the lower the cost of
+an item, the more often it is bought. However, estimating the prices based on
+this information in the future could lead to a self-fulfilling prophecy and
+down-spiraling prices of our products.
 
+Therefore, I would instead calculate the optimal price of a single product on
+the frequency with which his item was bought for different prices. However, for
+this, I need more information e.g. in what exact time frames the price of the
+article was. Further, I expect the frequency to be the highest right after a
+sale offer and decline exponentially over time. Thus, one needs to think about
+the expected long-term buy frequency. Note that one should also know the
+product-specific profit margin to avoid selling an item with a loss.
+
+Therefore, my current price estimation is based on the average unit price of an
+item. I know this is not optimal. However, I miss the data for a more
+sophisticated model.
 
 ## How would you evaluate the business impact of the solution and share the outcome with the internal stakeholders?
 I would start to argue with studies that have shown that recommending items
 increases the sales for a company. Assuming that the company does not yet have
 an item recommendation algorithm, I would further highlight the ratio of
 investing a relatively small amount of time and resources with my solution
-compared to the large increase in sales. If the company already has an item
-recommendation algorithm, I would showcase the benefits or potential synergies
-of using my solution. Following these arguments, I would suggest that my project
-is worth trying in an A/B user test to further evaluate the sales impact for our
-customers. 
+compared to the significant increase in sales. If the company already has an
+item recommendation algorithm, I would showcase the benefits or potential
+synergies of using my solution. Following these arguments, I would suggest that
+my project is worth trying in an A/B user test to further evaluate the sales
+impact for our customers. 
 
 
 

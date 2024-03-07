@@ -84,7 +84,7 @@ class Database_connector():
             con.close()
 
 
-    def calc_regression_v2(self, force:bool = False):
+    def calc_regression(self, force:bool = False):
         """
         This function to calculate the number of times each bundle has been
         bought. Note that this function can take some time. 
