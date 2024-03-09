@@ -10,7 +10,7 @@ All important files to run this project without docker are within the `src/`
 folder.
 
 ```bash
-$ git clone 
+$ git clone git@github.com:0815IDIOT/Conrad_Electronic_SE.git
 $ cd conrad_electronic_se/src
 $ chmod +x ./install.sh
 $ ./install.sh
@@ -20,7 +20,7 @@ $ ./install.sh
 ```bash
 $ source venv/bin/activate
 $ cd src/
-$ uvicorn my_REST_api:app --reload
+$ uvicorn recommendation_api:app --reload
 ```
 
 Your REST API is now available under `localhost:8000`. The possible endpoints
@@ -99,7 +99,7 @@ Now run the following command to have an docker which act as a REST API
 listening on port `8000`:
 
 ```bash
-$ sudo docker run -d --name conrad_api -p 80:8000 conrad_image
+$ sudo docker run -d --name conrad_api -p 8000:80 conrad_image
 ```
 
 ***

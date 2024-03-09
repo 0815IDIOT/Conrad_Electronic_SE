@@ -16,5 +16,6 @@ echo "[*] create new DB"
 sqlite3 resources/data.db < resources/sqlite3.sql
 
 echo "[*] sucessfully installed!"
+echo "[*] initialize database. this may take a while ..."
 
 python3 -B initialize.py

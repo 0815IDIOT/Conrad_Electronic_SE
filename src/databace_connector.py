@@ -144,6 +144,9 @@ class Database_connector():
         sql_statment += " WHERE stock_id = '" + str(stock_id) + "' AND invoice_types_id = " + str(self.invoice_types_id)
         count_max = cur.execute(sql_statment).fetchone()[0]
 
+        if count_max == 0:
+            return {}
+
         sql_statment = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC LIMIT " + str(limit)
         data = cur.execute(sql_statment).fetchall()
 
@@ -198,6 +201,9 @@ class Database_connector():
         for price_item in price_data:
             count += price_item[1]
             price += price_item[0] * price_item[1]
+        
+        if count == 0:
+            return 0.
         
         price = round(price / count, 2)
         print(price)
