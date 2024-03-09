@@ -26,9 +26,9 @@ $ uvicorn my_REST_api:app --reload
 Your REST API is now available under `localhost:8000`. The possible endpoints
 are:
 
-- `/stock_item/recommendation/bundle/{stock_id}`
+- `GET /stock_items/{stock_id}/recommendations/bundle`
     - Receiving the `20` most bought items to the stock with id `stock_id`. 
-- `/stock_item/recommendation/price/{stock_id}`
+- `GET /stock_items/{stock_id}/recommendations/price`
     - Receiving a price recommendation for the stock with the id `stock_id`. 
 
 ### Running as pure python
@@ -40,7 +40,7 @@ $ cd src/
 
 Create your python file and import and create an object of the the
 `Databace_connector` class from the
-[[src/databace_connector.py|databace_connector.py]] file. The object has the
+[databace_connector.py](src/databace_connector.py) file. The object has the
 following functions:
 
 `load_raw_data(data_path, split_training = 70)`: This function loads the local
@@ -51,7 +51,7 @@ database.
   folder.
 - `split_training` represents the percentage used for the training data. 
 
-`calc_regression(force = False)`: This function to calculate the number of times
+`calc_regression(force = False)`: This function will calculate the number of times
 each bundle has been bought. Note that this function can take some time. 
 - If `force` is set to **false**, and the regression table `bought_together`
   already holds data, the functions ask permission to delete the data,
@@ -81,8 +81,8 @@ dbc = Database_connector(db_path, dataset_type = "training")
 
 dbc.load_raw_data(data_path)
 dbc.calc_regression()
-dbc.get_recommanded_product(stock_id="22865")
-dbc.get_recommanded_price(stock_id="22865")
+dbc.get_recommanded_product(stock_id = "22865")
+dbc.get_recommanded_price(stock_id = "22865")
 ```
 
 ## Docker
@@ -134,6 +134,13 @@ It appears that one stock item can have different unit prices. I speculate that
 this might be due to coupons or special sale offers. Since I do not have any
 specific information about the reason, I included the unit price within the
 `shopping_lists` table and not the `stocks` table.
+
+**Attenchent**: I see this project as a prototype. As such, I did not use any
+ORM for the DB connection. If this project should be used in production, one
+should use an ORM e.g. SQLAlchemy, to prevent SQL injections and make the code
+scalable by using connection pooling. Further, in production, it would also be
+better to use a special python package for logging instead of the print
+function.
 
 ## What other splitting criteria would you choose if you could gather more features/data?
 I would use a test, validation, and training dataset. 

@@ -15,7 +15,7 @@ class Database_connector():
 
         return con, cur
     
-    def set_dataset(self, dataset_type: str):
+    def set_dataset(self, dataset_type: str) -> int:
         """
         Here, the user can set on which type of dataset the correlation should
         be calculated. The standard values are 'test' and 'training'.
@@ -25,8 +25,8 @@ class Database_connector():
 
         con, cur = self.get_connection()
 
-        sql = "SELECT invoice_types_id FROM invoice_types WHERE type_name = '" + str(dataset_type) + "'"
-        id = con.execute(sql).fetchone()
+        sql_statment = "SELECT invoice_types_id FROM invoice_types WHERE type_name = '" + str(dataset_type) + "'"
+        id = con.execute(sql_statment).fetchone()
 
         if len(id) == 0:
             raise ValueError("Unkown dataset type '" + str(dataset_type) + "'")
@@ -51,12 +51,12 @@ class Database_connector():
 
         print("[*] loading raw data from csv ...")
 
-        with open(data_path, "r",encoding='utf-8',errors='ignore') as csv_file:
+        with open(data_path, "r",encoding = 'utf-8',errors = 'ignore') as csv_file:
 
             con, cur = self.get_connection()
 
             first_row = True
-            csv_reader = csv.reader(csv_file, dialect=csv.excel, delimiter=",")
+            csv_reader = csv.reader(csv_file, dialect = csv.excel, delimiter = ",")
 
             for data in csv_reader:
                 if first_row:
@@ -98,8 +98,8 @@ class Database_connector():
         # If so, ask the user if he wants to delete the old data and recalculate 
         # the model data. Note, that the force flag ignores the user input.
 
-        sql = "SELECT count(*) FROM bought_together"
-        count = cur.execute(sql).fetchone()[0]
+        sql_statment = "SELECT count(*) FROM bought_together"
+        count = cur.execute(sql_statment).fetchone()[0]
 
         if count > 0:
             if not force:
@@ -111,23 +111,23 @@ class Database_connector():
                     print("[*] function aborted!")
                     sys.exit()
 
-            print("[*] Delet old regression data")
-            sql = "DELETE FROM bought_together"
-            cur.execute(sql)
+            print("[*] Delete old regression data")
+            sql_statment = "DELETE FROM bought_together"
+            cur.execute(sql_statment)
             con.commit()
 
         print("[*] Calculating regression")
         print("[*] This may take a while. Loading ... ")
     
-        sql = "INSERT INTO bought_together "
-        sql += "SELECT r.stock_id AS r_stock, l.stock_id AS l_stock, COUNT(*) FROM shopping_lists AS l JOIN shopping_lists AS r ON "
-        sql += "r.invoice_id = l.invoice_id AND l.stock_id != r.stock_id AND (SELECT invoice_types_id FROM invoices WHERE invoice_id = l.invoice_id) = 2 GROUP BY r.stock_id, l.stock_id"
+        sql_statment = "INSERT INTO bought_together "
+        sql_statment += "SELECT r.stock_id AS r_stock, l.stock_id AS l_stock, COUNT(*) FROM shopping_lists AS l JOIN shopping_lists AS r ON "
+        sql_statment += "r.invoice_id = l.invoice_id AND l.stock_id != r.stock_id AND (SELECT invoice_types_id FROM invoices WHERE invoice_id = l.invoice_id) = 2 GROUP BY r.stock_id, l.stock_id"
 
-        cur.execute(sql)
+        cur.execute(sql_statment)
         con.commit()
         con.close()
 
-    def get_recommanded_product(self, stock_id:str, limit:int = 20):
+    def get_recommanded_product(self, stock_id:str, limit:int = 20) -> list:
 
         """
         This function calculates the percentage at which a second product is
@@ -140,15 +140,15 @@ class Database_connector():
 
         con, cur = self.get_connection()
 
-        sql = "SELECT count(*) FROM shopping_lists JOIN invoices ON shopping_lists.invoice_id = invoices.invoice_id"
-        sql += " WHERE stock_id = '" + str(stock_id) + "' AND invoice_types_id = " + str(self.invoice_types_id)
-        count_max = cur.execute(sql).fetchone()[0]
+        sql_statment = "SELECT count(*) FROM shopping_lists JOIN invoices ON shopping_lists.invoice_id = invoices.invoice_id"
+        sql_statment += " WHERE stock_id = '" + str(stock_id) + "' AND invoice_types_id = " + str(self.invoice_types_id)
+        count_max = cur.execute(sql_statment).fetchone()[0]
 
-        sql = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC LIMIT " + str(limit)
-        data = cur.execute(sql).fetchall()
+        sql_statment = "SELECT * FROM bought_together WHERE stock_id_1 = '" + str(stock_id) + "' or stock_id_2 = '" + str(stock_id) + "' ORDER BY count DESC LIMIT " + str(limit)
+        data = cur.execute(sql_statment).fetchall()
 
-        sql = "SELECT DISTINCT unit_price FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "'"
-        prices_1 = cur.execute(sql).fetchall()
+        sql_statment = "SELECT DISTINCT unit_price FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "'"
+        prices_1 = cur.execute(sql_statment).fetchall()
         price_1_max = max(prices_1)[0]
         price_1_min = min(prices_1)[0]
 
@@ -161,13 +161,13 @@ class Database_connector():
                 stock_id_2 = row[0]
             count = row[2]
             
-            sql = "SELECT DISTINCT unit_price FROM shopping_lists WHERE stock_id = '" + str(stock_id_2) + "'"
-            prices_2 = cur.execute(sql).fetchall()
+            sql_statment = "SELECT DISTINCT unit_price FROM shopping_lists WHERE stock_id = '" + str(stock_id_2) + "'"
+            prices_2 = cur.execute(sql_statment).fetchall()
             price_2_max = max(prices_2)[0]
             price_2_min = min(prices_2)[0]
 
-            sql = "SELECT stock_descrip FROM stock_items WHERE stock_id = '" + str(stock_id_2) + "'"
-            stock_2_descrip = cur.execute(sql).fetchone()[0]
+            sql_statment = "SELECT stock_descrip FROM stock_items WHERE stock_id = '" + str(stock_id_2) + "'"
+            stock_2_descrip = cur.execute(sql_statment).fetchone()[0]
 
             rec_stocks.append({"stock": stock_id_2, 
                                "stock_descrip" : stock_2_descrip,
@@ -180,7 +180,7 @@ class Database_connector():
         return rec_stocks
     
 
-    def get_recommanded_price(self, stock_id:str):
+    def get_recommanded_price(self, stock_id:str) -> float:
         
         """
         Recommand a unit price for a product, depending on the historic mean
@@ -191,8 +191,8 @@ class Database_connector():
 
         con, cur = self.get_connection()
 
-        sql = "SELECT unit_price, count(*) FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "' GROUP BY unit_price"
-        price_data = cur.execute(sql).fetchall()
+        sql_statment = "SELECT unit_price, count(*) FROM shopping_lists WHERE stock_id = '" + str(stock_id) + "' GROUP BY unit_price"
+        price_data = cur.execute(sql_statment).fetchall()
         count = 0.
         price = 0.
         for price_item in price_data:
@@ -213,8 +213,8 @@ class Database_connector():
         if not isinstance(name, str): raise Exception("in function 'insert_customer': 'name' is not from type 'str' but from type '" + str(type(name)) + "'")
         if not isinstance(address, str): raise Exception("in function 'insert_customer': 'address' is not from type 'str' but from type '" + str(type(address)) + "'")
 
-        sql = "INSERT OR IGNORE INTO customers VALUES (" + str(customer_id) + ", '" + str(name) + "', '" + str(address) + "')"
-        cur.execute(sql)
+        sql_statment = "INSERT OR IGNORE INTO customers VALUES (" + str(customer_id) + ", '" + str(name) + "', '" + str(address) + "')"
+        cur.execute(sql_statment)
 
 
     def insert_stock_item(self, cur, stock_id:str, stock_descrip:str):
@@ -222,8 +222,8 @@ class Database_connector():
         if not isinstance(stock_id, str): raise Exception("in function 'insert_stock_item': 'stock_id' is not from type 'str' but from type '" + str(type(stock_id)) + "'")
         if not isinstance(stock_descrip, str): raise Exception("in function 'insert_stock_item': 'stock_descrip' is not from type 'str' but from type '" + str(type(stock_descrip)) + "'")
 
-        sql = "INSERT OR IGNORE INTO stock_items VALUES ('" + str(stock_id) + "', '" + str(stock_descrip.replace("\"","").replace("'","")) + "')"
-        cur.execute(sql)
+        sql_statment = "INSERT OR IGNORE INTO stock_items VALUES ('" + str(stock_id) + "', '" + str(stock_descrip.replace("\"","").replace("'","")) + "')"
+        cur.execute(sql_statment)
 
 
     def insert_invoice(self, cur, invoice_id:str, customer_id:int, invoice_date:str, country:str, invoice_types_id:int):
@@ -234,8 +234,8 @@ class Database_connector():
         if not isinstance(country, str): raise Exception("in function 'insert_invoice': 'country' is not from type 'str' but from type '" + str(type(invoice_types_id)) + "'")
         if not isinstance(invoice_types_id, int): raise Exception("in function 'insert_invoice': 'invoice_types_id' is not from type 'int' but from type '" + str(type(invoice_types_id)) + "'")
 
-        sql = "INSERT OR IGNORE INTO invoices VALUES ('" + str(invoice_id) + "', " + str(customer_id) +  ", '" + str(invoice_date) + "', '" + str(country) + "', " + str(invoice_types_id) + ")"
-        cur.execute(sql)
+        sql_statment = "INSERT OR IGNORE INTO invoices VALUES ('" + str(invoice_id) + "', " + str(customer_id) +  ", '" + str(invoice_date) + "', '" + str(country) + "', " + str(invoice_types_id) + ")"
+        cur.execute(sql_statment)
 
 
     def insert_shopping_list(self, cur, invoice_id:str, stock_id:str, quantity:int, unit_price:float):        
@@ -245,5 +245,5 @@ class Database_connector():
         if not isinstance(quantity, int): raise Exception("in function 'insert_shopping_list': 'quantity' is not from type 'int' but from type '" + str(type(quantity)) + "'")
         if not isinstance(unit_price, float): raise Exception("in function 'insert_shopping_list': 'unit_price' is not from type 'float' but from type '" + str(type(unit_price)) + "'")
 
-        sql = "INSERT OR IGNORE INTO shopping_lists VALUES ('" + str(invoice_id) + "', '" + str(stock_id) + "', " + str(quantity) + ", " + str(unit_price) + ")"
-        cur.execute(sql)
+        sql_statment = "INSERT OR IGNORE INTO shopping_lists VALUES ('" + str(invoice_id) + "', '" + str(stock_id) + "', " + str(quantity) + ", " + str(unit_price) + ")"
+        cur.execute(sql_statment)
